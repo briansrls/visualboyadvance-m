@@ -2374,10 +2374,10 @@ public:
         evt.Skip(false);
 
         if (val == 0) {
-            speedup_throttle   = 0;
-            speedup_frame_skip = 0;
-
+            speedup_throttle            = 0;
+            speedup_frame_skip          = 0;
             speedup_throttle_frame_skip = false;
+
             frame_skip_cb->SetValue(false);
             frame_skip_cb->Disable();
 
@@ -2385,13 +2385,15 @@ public:
                 return; // Do not update value if user cleared text box.
         }
         else if (val <= 600) {
-            speedup_throttle = val;
+            speedup_throttle   = val;
+            speedup_frame_skip = 0;
 
             frame_skip_cb->SetValue(prev_frame_skip_cb);
             frame_skip_cb->Enable();
         }
         else { // val > 600
-            speedup_throttle = 0;
+            speedup_throttle            = 100;
+            speedup_throttle_frame_skip = false;
 
             unsigned rounded = std::round((double)val / 100) * 100;
 
@@ -2405,7 +2407,6 @@ public:
             else if ((int)(val - rounded) < 0)
                 speedup_frame_skip--;
 
-            speedup_throttle_frame_skip = true;
             frame_skip_cb->SetValue(true);
             frame_skip_cb->Disable();
 
@@ -2426,26 +2427,21 @@ public:
 
     void Init(wxShowEvent& ev)
     {
-        uint32_t val = 0;
-
-        if (speedup_throttle != 0)
-            val = speedup_throttle;
-        else if (speedup_frame_skip != 0)
-            val = (speedup_frame_skip + 1) * 100;
-
-        speedup_throttle_spin->SetValue(val);
-
-        frame_skip_cb->SetValue(speedup_throttle_frame_skip);
-
-        prev_frame_skip_cb = frame_skip_cb->GetValue();
-
-        if (val > 600 || val == 0)
+        if (speedup_frame_skip != 0) {
+            speedup_throttle_spin->SetValue((speedup_frame_skip + 1) * 100);
+            frame_skip_cb->SetValue(true);
             frame_skip_cb->Disable();
+        }
+        else {
+            speedup_throttle_spin->SetValue(speedup_throttle);
+            frame_skip_cb->SetValue(speedup_throttle_frame_skip);
+            frame_skip_cb->Enable();
+        }
 
         ev.Skip();
     }
 private:
-    bool prev_frame_skip_cb = true;
+    bool prev_frame_skip_cb = speedup_throttle_frame_skip;
 } speedup_throttle_ctrl;
 
 /////////////////////////////
