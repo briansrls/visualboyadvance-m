@@ -53,19 +53,30 @@ void wxSDLJoy::Poll()
             case SDL_CONTROLLERBUTTONDOWN:
             case SDL_CONTROLLERBUTTONUP:
             {
-                auto joy = e.cbutton.which;
+                auto joy_iid = e.cbutton.which;
 
-                if (!SDL_IsGameController(joy))
+                SDL_GameController* gc = SDL_GameControllerFromInstanceID(joy_iid);
+
+                int joy_index = -1;
+
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == gc) {
+                        joy_index = joy.first;
+                        break;
+                    }
+                }
+
+                if (!SDL_IsGameController(joy_index))
                     break;
 
-                if (contains(joystate, joy)) {
+                if (contains(joystate, joy_index)) {
                     auto but      = e.cbutton.button;
                     auto val      = e.cbutton.state;
-                    auto prev_val = joystate[joy].button[but];
+                    auto prev_val = joystate[joy_index].button[but];
 
                     if (handler && val != prev_val) {
                         wxSDLJoyEvent ev(wxEVT_SDLJOY);
-                        ev.joy           = joy;
+                        ev.joy           = joy_index;
                         ev.ctrl_type     = WXSDLJOY_BUTTON;
                         ev.ctrl_idx      = but;
                         ev.ctrl_val      = val;
@@ -74,9 +85,9 @@ void wxSDLJoy::Poll()
                         handler->ProcessEvent(ev);
                     }
 
-                    joystate[joy].button[but] = val;
+                    joystate[joy_index].button[but] = val;
 
-                    wxLogDebug("GOT SDL_CONTROLLERBUTTON: joy:%d but:%d val:%d prev_val:%d", joy, but, val, prev_val);
+                    wxLogDebug("GOT SDL_CONTROLLERBUTTON: joy:%d but:%d val:%d prev_val:%d", joy_index, but, val, prev_val);
                 }
 
                 got_event = true;
@@ -85,19 +96,30 @@ void wxSDLJoy::Poll()
             }
             case SDL_CONTROLLERAXISMOTION:
             {
-                auto joy = e.caxis.which;
+                auto joy_iid = e.caxis.which;
 
-                if (!SDL_IsGameController(joy))
+                SDL_GameController* gc = SDL_GameControllerFromInstanceID(joy_iid);
+
+                int16_t joy_index = -1;
+
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == gc) {
+                        joy_index = joy.first;
+                        break;
+                    }
+                }
+
+                if (!SDL_IsGameController(joy_index))
                     break;
 
-                if (contains(joystate, joy)) {
+                if (contains(joystate, joy_index)) {
                     auto axis     = e.caxis.axis;
                     auto val      = axisval(e.caxis.value);
-                    auto prev_val = joystate[joy].axis[axis];
+                    auto prev_val = joystate[joy_index].axis[axis];
 
                     if (handler && val != prev_val) {
                         wxSDLJoyEvent ev(wxEVT_SDLJOY);
-                        ev.joy           = joy;
+                        ev.joy           = joy_index;
                         ev.ctrl_type     = WXSDLJOY_AXIS;
                         ev.ctrl_idx      = axis;
                         ev.ctrl_val      = val;
@@ -105,9 +127,9 @@ void wxSDLJoy::Poll()
 
                         handler->ProcessEvent(ev);
 
-                        joystate[joy].axis[axis] = val;
+                        joystate[joy_index].axis[axis] = val;
 
-                        wxLogDebug("GOT SDL_CONTROLLERAXISMOTION: joy:%d axis:%d val:%d prev_val:%d", joy, axis, val, prev_val);
+                        wxLogDebug("GOT SDL_CONTROLLERAXISMOTION: joy:%d axis:%d val:%d prev_val:%d", joy_index, axis, val, prev_val);
                     }
                 }
 
@@ -116,18 +138,41 @@ void wxSDLJoy::Poll()
                 break;
             }
             case SDL_CONTROLLERDEVICEADDED:
-            case SDL_CONTROLLERDEVICEREMAPPED:
             {
-                auto joy = e.cdevice.which;
+                //Game Controller index for ADDED
+                auto joy_index = e.cdevice.which;
+                std::cout << "CONTROLLERDEVICEADDED Joy index = " << joy_index << std::endl;
 
-                if (!SDL_IsGameController(joy))
+                if (!SDL_IsGameController(joy_index))
                     break;
 
-                if (add_all || contains(joystate, joy)) {
-                    DisconnectController(joy);
-                    ConnectController(joy);
+                if (add_all || contains(joystate, joy_index)) {
+                    DisconnectController(joy_index);
+                    ConnectController(joy_index);
 
-                    systemScreenMessage(wxString::Format(_("Connected game controller %d"), joy + 1));
+                    systemScreenMessage(wxString::Format(_("Connected game controller %d"), joy_index + 1));
+                }
+
+                got_event = true;
+
+                break;
+            }
+            case SDL_CONTROLLERDEVICEREMAPPED:
+            {
+                //Game Controller Instance ID
+                auto joy_iid = e.cdevice.which;
+                std::cout << "CONTROLLERDEVICEREMOVED Joy IID = " << joy_iid << std::endl;
+
+                SDL_GameController* gc = SDL_GameControllerFromInstanceID(joy_iid);
+
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == gc) {
+                        DisconnectController(joy.first);
+                        ConnectController(joy.first);
+
+                        systemScreenMessage(wxString::Format(_("Connected game controller %d"), joy.first + 1));
+                        break;
+                    }
                 }
 
                 got_event = true;
@@ -136,12 +181,20 @@ void wxSDLJoy::Poll()
             }
             case SDL_CONTROLLERDEVICEREMOVED:
             {
-                auto joy = e.cdevice.which;
+                //Joystick Instance ID
+                auto joy_iid = e.cdevice.which;
+                std::cout << "CONTROLLERDEVICEREMOVED Joy IID = " << joy_iid << std::endl;
 
-                if (contains(joystate, joy)) {
-                    DisconnectController(joy);
+                SDL_GameController* gc = SDL_GameControllerFromInstanceID(joy_iid);
 
-                    systemScreenMessage(wxString::Format(_("Disconnected game controller %d"), joy + 1));
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == gc) {
+                        systemScreenMessage(wxString::Format(_("Disconnected game controller %d"), joy.first + 1));
+
+                        DisconnectController(joy.first);
+
+                        break;
+                    }
                 }
 
                 got_event = true;
@@ -154,19 +207,30 @@ void wxSDLJoy::Poll()
             case SDL_JOYBUTTONDOWN:
             case SDL_JOYBUTTONUP:
             {
-                auto joy = e.jbutton.which;
+                auto joy_iid = e.jbutton.which;
 
-                if (SDL_IsGameController(joy))
+                SDL_Joystick* js = SDL_JoystickFromInstanceID(joy_iid);
+
+                int joy_index = -1;
+
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == js) {
+                        joy_index = joy.first;
+                        break;
+                    }
+                }
+
+                if (SDL_IsGameController(joy_index))
                     break;
 
-                if (contains(joystate, joy)) {
+                if (contains(joystate, joy_index)) {
                     auto but      = e.jbutton.button;
                     auto val      = e.jbutton.state;
-                    auto prev_val = joystate[joy].button[but];
+                    auto prev_val = joystate[joy_index].button[but];
 
                     if (handler && val != prev_val) {
                         wxSDLJoyEvent ev(wxEVT_SDLJOY);
-                        ev.joy           = joy;
+                        ev.joy           = joy_index;
                         ev.ctrl_type     = WXSDLJOY_BUTTON;
                         ev.ctrl_idx      = but;
                         ev.ctrl_val      = val;
@@ -175,9 +239,9 @@ void wxSDLJoy::Poll()
                         handler->ProcessEvent(ev);
                     }
 
-                    joystate[joy].button[but] = val;
+                    joystate[joy_index].button[but] = val;
 
-                    wxLogDebug("GOT SDL_JOYBUTTON: joy:%d but:%d val:%d prev_val:%d", joy, but, val, prev_val);
+                    wxLogDebug("GOT SDL_JOYBUTTON: joy:%d but:%d val:%d prev_val:%d", joy_index, but, val, prev_val);
                 }
 
                 got_event = true;
@@ -186,19 +250,30 @@ void wxSDLJoy::Poll()
             }
             case SDL_JOYAXISMOTION:
             {
-                auto joy = e.jaxis.which;
+                auto joy_iid = e.jaxis.which;
 
-                if (SDL_IsGameController(joy))
+                SDL_Joystick* js = SDL_JoystickFromInstanceID(joy_iid);
+
+                int joy_index = -1;
+
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == js) {
+                        joy_index = joy.first;
+                        break;
+                    }
+                }
+
+                if (SDL_IsGameController(joy_index))
                     break;
 
-                if (contains(joystate, joy)) {
+                if (contains(joystate, joy_index)) {
                     auto axis     = e.jaxis.axis;
                     auto val      = axisval(e.jaxis.value);
-                    auto prev_val = joystate[joy].axis[axis];
+                    auto prev_val = joystate[joy_index].axis[axis];
 
                     if (handler && val != prev_val) {
                         wxSDLJoyEvent ev(wxEVT_SDLJOY);
-                        ev.joy           = joy;
+                        ev.joy           = joy_index;
                         ev.ctrl_type     = WXSDLJOY_AXIS;
                         ev.ctrl_idx      = axis;
                         ev.ctrl_val      = val;
@@ -206,9 +281,9 @@ void wxSDLJoy::Poll()
 
                         handler->ProcessEvent(ev);
 
-                        joystate[joy].axis[axis] = val;
+                        joystate[joy_index].axis[axis] = val;
 
-                        wxLogDebug("GOT SDL_JOYAXISMOTION: joy:%d axis:%d val:%d prev_val:%d", joy, axis, val, prev_val);
+                        wxLogDebug("GOT SDL_JOYAXISMOTION: joy:%d axis:%d val:%d prev_val:%d", joy_index, axis, val, prev_val);
                     }
                 }
 
@@ -218,16 +293,18 @@ void wxSDLJoy::Poll()
             }
             case SDL_JOYDEVICEADDED:
             {
-                auto joy = e.cdevice.which;
+                //Joystick device index
+                auto joy_index = e.jdevice.which;
+                std::cout << "JOYDEVICEADDED Joy index = " << joy_index << std::endl;
 
-                if (SDL_IsGameController(joy))
+                if (SDL_IsGameController(joy_index))
                     break;
 
-                if (add_all || contains(joystate, joy)) {
-                    DisconnectController(joy);
-                    ConnectController(joy);
+                if (add_all || contains(joystate, joy_index)) {
+                    DisconnectController(joy_index);
+                    ConnectController(joy_index);
 
-                    systemScreenMessage(wxString::Format(_("Connected joystick %d"), joy + 1));
+                    systemScreenMessage(wxString::Format(_("Connected joystick %d"), joy_index + 1));
                 }
 
                 got_event = true;
@@ -236,15 +313,18 @@ void wxSDLJoy::Poll()
             }
             case SDL_JOYDEVICEREMOVED:
             {
-                auto joy = e.cdevice.which;
+                //InstanceID
+                auto joy_iid = e.jdevice.which;
+                std::cout << "JOYDEVICEREMOVED Joy IID = " << joy_iid << std::endl;
+                SDL_Joystick* js = SDL_JoystickFromInstanceID(joy_iid);
 
-                if (SDL_IsGameController(joy))
-                    break;
+                for (auto&& joy : joystate) {
+                    if (joy.second.dev == js) {
+                        DisconnectController(joy.first);
 
-                if (contains(joystate, joy)) {
-                    DisconnectController(joy);
-
-                    systemScreenMessage(wxString::Format(_("Disconnected joystick %d"), joy + 1));
+                        systemScreenMessage(wxString::Format(_("Disconnected joystick %d"), joy.first + 1));
+                        break;
+                    }
                 }
 
                 got_event = true;
@@ -372,21 +452,27 @@ void wxSDLJoy::ConnectController(uint8_t joy)
             return;
         }
     }
+
+    std::cout << "ConnectController " << (SDL_GameController*)joystate[joy].dev << std::endl;
 }
 
 void wxSDLJoy::DisconnectController(uint8_t joy)
 {
     if (auto& dev = joystate[joy].dev) {
         if (SDL_IsGameController(joy)) {
-            if (SDL_GameControllerGetAttached(dev))
+            if (SDL_GameControllerGetAttached(dev)) {
+                std::cout << "GameControllerClose " << (SDL_GameController*)dev << std::endl;
                 SDL_GameControllerClose(dev);
+            }
         }
         else {
-            if (SDL_JoystickGetAttached(dev))
+            if (SDL_JoystickGetAttached(dev)) {
+                std::cout << "JoystickClose " << (SDL_Joystick*)dev << std::endl;
                 SDL_JoystickClose(dev);
+            }
         }
 
-        dev = nullptr;
+        joystate.erase(joy);
     }
 }
 
