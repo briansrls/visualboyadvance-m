@@ -2576,9 +2576,6 @@ void MainFrame::set_global_accels()
     // first, zero out menu item on all accels
     for (size_t i = 0; i < accels.size(); ++i) {
         accels[i].Set(accels[i].GetUkey(), accels[i].GetJoystick(), accels[i].GetFlags(), accels[i].GetKeyCode(), accels[i].GetCommand());
-        if (accels[i].GetJoystick()) {
-            joy.Add(accels[i].GetJoystick() - 1);
-        }
     }
 
     // yet another O(n*m) loop.  I really ought to sort the accel arrays

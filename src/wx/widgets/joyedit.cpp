@@ -11,7 +11,7 @@ EVT_SDLJOY(wxJoyKeyTextCtrl::OnJoy)
 END_EVENT_TABLE()
 
 // Initializer for struct wxJoyKeyBinding
-wxJoyKeyBinding newWxJoyKeyBinding(int key, int mod, int joy)
+wxJoyKeyBinding newWxJoyKeyBinding(int key, int mod, SDL_JoystickID joy)
 {
     struct wxJoyKeyBinding tmp = {key, mod, joy};
     return tmp;
@@ -83,7 +83,8 @@ void wxJoyKeyTextCtrl::OnJoy(wxSDLJoyEvent& event)
     last_event = wxGetUTCTimeMillis();
 
     int mod = DigitalButton(event);
-    int key = event.GetControlIndex(), joy = event.GetJoy() + 1;
+    int key = event.GetControlIndex();
+    SDL_JoystickID joy = event.GetJoy() + 1;
 
     if (!val || mod < 0)
         return;
@@ -106,7 +107,7 @@ void wxJoyKeyTextCtrl::OnJoy(wxSDLJoyEvent& event)
         Navigate();
 }
 
-wxString wxJoyKeyTextCtrl::ToString(int mod, int key, int joy, bool isConfig)
+wxString wxJoyKeyTextCtrl::ToString(int mod, int key, SDL_JoystickID joy, bool isConfig)
 {
     if (!joy)
         return wxKeyTextCtrl::ToString(mod, key, isConfig);

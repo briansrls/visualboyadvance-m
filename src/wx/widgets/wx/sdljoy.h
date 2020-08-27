@@ -54,14 +54,14 @@ public:
     // -1 == add all
     // If joy > # of joysticks, it is ignored
     // This will start polling if a valid joystick is selected
-    void Add(int8_t joy = -1);
+    void Add();
     // remove a joystick from the polled sticks
     // -1 == remove all
     // If joy > # of joysticks, it is ignored
     // This will stop polling if all joysticks are disabled
-    void Remove(int8_t joy = -1);
+    void Remove();
     // query if a stick is being polled
-    bool IsPolling(uint8_t joy) { return contains(joystate, joy); }
+    bool IsPolling(SDL_JoystickID joy_iid) { return contains(joystate, joy_iid) || contains(gcstate, joy_iid); }
 
     // true = currently rumbling, false = turn off rumbling
     void SetRumble(bool do_rumble);
@@ -73,13 +73,14 @@ public:
 protected:
     // used to continue rumbling on a timer
     void Notify();
-    void ConnectController(uint8_t joy);
-    void DisconnectController(uint8_t joy);
+    void ConnectController(int joystick_index);
+    void DisconnectController(SDL_JoystickID instance_id);
 
     const uint8_t POLL_TIME_MS = 10;
 
 private:
-    std::unordered_map<uint8_t, wxSDLJoyState> joystate;
+    std::unordered_map<SDL_JoystickID, wxSDLJoyState> joystate;
+    std::unordered_map<SDL_JoystickID, wxSDLJoyState> gcstate;
     wxEvtHandler* evthandler;
     bool add_all = false, rumbling = false;
 
@@ -127,7 +128,7 @@ public:
     }
 
 protected:
-    unsigned short joy;
+    SDL_JoystickID joy;
     unsigned short ctrl_type;
     unsigned short ctrl_idx;
     short ctrl_val;
