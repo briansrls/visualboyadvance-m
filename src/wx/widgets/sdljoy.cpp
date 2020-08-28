@@ -112,13 +112,12 @@ void wxSDLJoy::Poll()
             }
             case SDL_CONTROLLERDEVICEADDED:
             {
-                //Game Controller index for ADDED
                 int joystick_index = e.cdevice.which;
-                std::cout << "CONTROLLERDEVICEADDED Joy index = " << joystick_index << std::endl;
 
-                ConnectController(joystick_index);
+                wxSDLJoyDev added = ConnectController(joystick_index);
 
-                systemScreenMessage(wxString::Format(_("Connected game controller %d"), joystick_index + 1));
+                if((SDL_GameController*)added)
+                    wxLogDebug("ConnectController (%d) success: %s", joystick_index, SDL_GetError());
 
                 got_event = true;
 
@@ -127,20 +126,6 @@ void wxSDLJoy::Poll()
             case SDL_CONTROLLERDEVICEREMAPPED:
             {
                 SDL_JoystickID instance_id = e.cdevice.which;
-                std::cout << "CONTROLLERDEVICEREMOVED Joy IID = " << instance_id << std::endl;
-
-                //I don't think we have to do anything here
-#if 0
-                for (auto&& joy : joystate) {
-                    if (joy.second.dev == gc) {
-                        DisconnectController(joy.first);
-                        ConnectController(joy.first);
-
-                        systemScreenMessage(wxString::Format(_("Connected game controller %d"), joy.first + 1));
-                        break;
-                    }
-                }
-#endif
 
                 got_event = true;
 
@@ -148,9 +133,9 @@ void wxSDLJoy::Poll()
             }
             case SDL_CONTROLLERDEVICEREMOVED:
             {
-                //Joystick Instance ID
+                //Seems there is no need to explicity close the controller here, as it has already been closed by SDL
+
                 SDL_JoystickID instance_id = e.cdevice.which;
-                std::cout << "CONTROLLERDEVICEREMOVED Joy IID = " << instance_id << std::endl;
 
                 gcstate.erase(instance_id);
 
@@ -222,11 +207,15 @@ void wxSDLJoy::Poll()
             }
             case SDL_JOYDEVICEADDED:
             {
-                //Joystick device index
+                //When connecting a GameController, we will also get a JOYDEVICEADDED event.  That's alright,
+                //because we'll just open the same GameController twice (harmless)
+                
                 int joystick_index = e.jdevice.which;
-                std::cout << "JOYDEVICEADDED Joy index = " << joystick_index << std::endl;
 
-                ConnectController(joystick_index);
+                wxSDLJoyDev added = ConnectController(joystick_index);
+
+                if ((SDL_Joystick*)added)
+                    wxLogDebug("ConnectController (%d) success: %s", joystick_index, SDL_GetError());
 
                 got_event = true;
 
@@ -234,7 +223,8 @@ void wxSDLJoy::Poll()
             }
             case SDL_JOYDEVICEREMOVED:
             {
-                //InstanceID
+                //Seems there is no need to explicity close the controller here, as it has already been closed by SDL
+
                 SDL_JoystickID instance_id = e.jdevice.which;
 
                 joystate.erase(instance_id);
@@ -346,37 +336,35 @@ void wxSDLJoy::Poll()
     }
 }
 
-void wxSDLJoy::ConnectController(int joystick_index)
+wxSDLJoyDev wxSDLJoy::ConnectController(int joystick_index)
 {
-    if (SDL_GameController* dev = SDL_GameControllerOpen(joystick_index)) {
-        SDL_Joystick* dev_js = SDL_GameControllerGetJoystick(dev);
+    if (SDL_GameController* dev_gc = SDL_GameControllerOpen(joystick_index)) {
+        SDL_Joystick* dev_js = SDL_GameControllerGetJoystick(dev_gc);
         SDL_JoystickID instance_id = SDL_JoystickInstanceID(dev_js);
-        std::cout << "Connected GameController" << std::endl;
 
-        gcstate[instance_id].dev = dev;
+        gcstate[instance_id].dev = dev_gc;
+        return dev_gc;
     }
-    else if (SDL_Joystick* dev = SDL_JoystickOpen(joystick_index)) {
-        SDL_JoystickID instance_id = SDL_JoystickInstanceID(dev);
-        std::cout << "Connected Joystick" << std::endl;
+    else if (SDL_Joystick* dev_js = SDL_JoystickOpen(joystick_index)) {
+        SDL_JoystickID instance_id = SDL_JoystickInstanceID(dev_js);
         
-        joystate[instance_id].dev = dev;
+        joystate[instance_id].dev = dev_js;
+        return dev_js;
     }
     else {
         wxLogDebug("ConnectController (%d) failed: %s", joystick_index, SDL_GetError());
-        return;
+        return nullptr;
     }
 }
 
 void wxSDLJoy::DisconnectController(SDL_JoystickID instance_id)
 {
     if (auto& dev = gcstate[instance_id].dev) {
-        std::cout << "GameControllerClose " << (SDL_GameController*)dev << std::endl;
 
         SDL_GameControllerClose(dev);
         gcstate.erase(instance_id);
     }
     if (auto& dev = joystate[instance_id].dev) {
-        std::cout << "JoystickClose " << (SDL_Joystick*)dev << std::endl;
 
         SDL_JoystickClose(dev);
         joystate.erase(instance_id);
@@ -390,7 +378,7 @@ wxEvtHandler* wxSDLJoy::Attach(wxEvtHandler* handler)
     return prev;
 }
 
-void wxSDLJoy::Add()
+void wxSDLJoy::AddAll()
 {
     for (uint8_t joy : range(0, SDL_NumJoysticks()))
         ConnectController(joy);
@@ -400,7 +388,7 @@ void wxSDLJoy::Add()
     return;
 }
 
-void wxSDLJoy::Remove()
+void wxSDLJoy::RemoveAll()
 {
     add_all = false;
 

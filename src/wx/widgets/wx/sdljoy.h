@@ -27,6 +27,18 @@ struct wxSDLJoyDev {
             SDL_Joystick*       dev_js;
         };
     public:
+        wxSDLJoyDev(SDL_GameController* dev) {
+            dev_gc = dev;
+        }
+        wxSDLJoyDev(SDL_Joystick* dev) {
+            dev_js = dev;
+        }
+        wxSDLJoyDev(std::nullptr_t null) {
+            dev_gc = null;
+        }
+        wxSDLJoyDev() {
+            dev_gc = nullptr;
+        }
         operator SDL_GameController*&();
         SDL_GameController*& operator=(SDL_GameController* ptr);
 
@@ -54,12 +66,11 @@ public:
     // -1 == add all
     // If joy > # of joysticks, it is ignored
     // This will start polling if a valid joystick is selected
-    void Add();
-    // remove a joystick from the polled sticks
-    // -1 == remove all
+    void AddAll();
+    // remove all joystick from the polled sticks
     // If joy > # of joysticks, it is ignored
     // This will stop polling if all joysticks are disabled
-    void Remove();
+    void RemoveAll();
     // query if a stick is being polled
     bool IsPolling(SDL_JoystickID joy_iid) { return contains(joystate, joy_iid) || contains(gcstate, joy_iid); }
 
@@ -73,7 +84,7 @@ public:
 protected:
     // used to continue rumbling on a timer
     void Notify();
-    void ConnectController(int joystick_index);
+    wxSDLJoyDev ConnectController(int joystick_index);
     void DisconnectController(SDL_JoystickID instance_id);
 
     const uint8_t POLL_TIME_MS = 10;
