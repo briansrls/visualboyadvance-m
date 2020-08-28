@@ -1215,7 +1215,7 @@ struct game_key {
     wxJoyKeyBinding_v& b;
 };
 
-static std::vector<game_key>* game_keys_pressed(int key, int mod, int joy)
+static std::vector<game_key>* game_keys_pressed(int key, int mod, int player_index)
 {
     auto vec = new std::vector<game_key>;
 
@@ -1224,14 +1224,14 @@ static std::vector<game_key>* game_keys_pressed(int key, int mod, int joy)
             wxJoyKeyBinding_v& b = gopts.joykey_bindings[player][key_num];
 
             for (size_t bind_num = 0; bind_num < b.size(); bind_num++)
-                if (b[bind_num].key == key && b[bind_num].mod == mod && b[bind_num].joy == joy)
+                if (b[bind_num].key == key && b[bind_num].mod == mod && b[bind_num].player_index == player_index)
                     vec->push_back({player, key_num, (int)bind_num, b});
         }
 
     return vec;
 }
 
-static bool process_key_press(bool down, int key, int mod, int joy = 0)
+static bool process_key_press(bool down, int key, int mod, int player_index = -1)
 {
     // modifier-only key releases do not set the modifier flag
     // so we set it here to match key release events to key press events
@@ -1251,7 +1251,7 @@ static bool process_key_press(bool down, int key, int mod, int joy = 0)
             break;
 #endif
         default:
-            if (joy == 0) mod = 0;
+            if (player_index == -1) mod = 0;
             break;
     }
 
@@ -1259,10 +1259,10 @@ static bool process_key_press(bool down, int key, int mod, int joy = 0)
     size_t kpno;
 
     for (kpno = 0; kpno < keys_pressed.size(); kpno++)
-        if (keys_pressed[kpno].key == key && keys_pressed[kpno].mod == mod && keys_pressed[kpno].joy == joy)
+        if (keys_pressed[kpno].key == key && keys_pressed[kpno].mod == mod && keys_pressed[kpno].player_index == player_index)
             break;
 
-    auto game_keys = game_keys_pressed(key, mod, joy);
+    auto game_keys = game_keys_pressed(key, mod, player_index);
 
     const bool is_game_key = game_keys->size();
 
@@ -1279,7 +1279,7 @@ static bool process_key_press(bool down, int key, int mod, int joy = 0)
             return is_game_key;
 
         // otherwise remember it
-        keys_pressed.push_back({key, mod, joy});
+        keys_pressed.push_back({key, mod, player_index});
     }
 
     for (auto&& game_key : *game_keys) {
@@ -1293,11 +1293,11 @@ static bool process_key_press(bool down, int key, int mod, int joy = 0)
             auto b = game_key.b;
 
             for (bind2 = 0; bind2 < game_key.b.size(); bind2++) {
-                if ((size_t)game_key.bind_num == bind2 || (b[bind2].key == key && b[bind2].mod == mod && b[bind2].joy == joy))
+                if ((size_t)game_key.bind_num == bind2 || (b[bind2].key == key && b[bind2].mod == mod && b[bind2].player_index == player_index))
                     continue;
 
                 for (kpno = 0; kpno < keys_pressed.size(); kpno++)
-                    if (keys_pressed[kpno].key == b[bind2].key && keys_pressed[kpno].mod == b[bind2].mod && keys_pressed[kpno].joy == b[bind2].joy)
+                    if (keys_pressed[kpno].key == b[bind2].key && keys_pressed[kpno].mod == b[bind2].mod && keys_pressed[kpno].player_index == b[bind2].player_index)
                         break;
             }
 
@@ -1387,23 +1387,23 @@ void GameArea::OnSDLJoy(wxSDLJoyEvent& ev)
 {
     int key = ev.GetControlIndex();
     int mod = wxJoyKeyTextCtrl::DigitalButton(ev);
-    int joy = ev.GetJoy() + 1;
+    int player_index = ev.GetPlayerIndex();
 
     // mutually exclusive key types unpress their opposite
     if (mod == WXJB_AXIS_PLUS) {
-        process_key_press(false, key, WXJB_AXIS_MINUS, joy);
-        process_key_press(ev.GetControlValue() != 0, key, mod, joy);
+        process_key_press(false, key, WXJB_AXIS_MINUS, player_index);
+        process_key_press(ev.GetControlValue() != 0, key, mod, player_index);
     } else if (mod == WXJB_AXIS_MINUS) {
-        process_key_press(false, key, WXJB_AXIS_PLUS, joy);
-        process_key_press(ev.GetControlValue() != 0, key, mod, joy);
+        process_key_press(false, key, WXJB_AXIS_PLUS, player_index);
+        process_key_press(ev.GetControlValue() != 0, key, mod, player_index);
     } else if (mod >= WXJB_HAT_FIRST && mod <= WXJB_HAT_LAST) {
         int value = ev.GetControlValue();
-        process_key_press(value & SDL_HAT_UP, key, WXJB_HAT_N, joy);
-        process_key_press(value & SDL_HAT_DOWN, key, WXJB_HAT_S, joy);
-        process_key_press(value & SDL_HAT_RIGHT, key, WXJB_HAT_E, joy);
-        process_key_press(value & SDL_HAT_LEFT, key, WXJB_HAT_W, joy);
+        process_key_press(value & SDL_HAT_UP, key, WXJB_HAT_N, player_index);
+        process_key_press(value & SDL_HAT_DOWN, key, WXJB_HAT_S, player_index);
+        process_key_press(value & SDL_HAT_RIGHT, key, WXJB_HAT_E, player_index);
+        process_key_press(value & SDL_HAT_LEFT, key, WXJB_HAT_W, player_index);
     } else
-        process_key_press(ev.GetControlValue() != 0, key, mod, joy);
+        process_key_press(ev.GetControlValue() != 0, key, mod, player_index);
 
     // tell Linux to turn off the screensaver/screen-blank if joystick button was pressed
     // this shouldn't be necessary of course

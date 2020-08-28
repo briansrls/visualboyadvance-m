@@ -867,8 +867,8 @@ int MainFrame::FilterEvent(wxEvent& event)
         if (je.GetControlValue() == 0) return -1; // joystick button UP
         int key = je.GetControlIndex();
         int mod = wxJoyKeyTextCtrl::DigitalButton(je);
-        int joy = je.GetJoy() + 1;
-        wxString label = wxJoyKeyTextCtrl::ToString(mod, key, joy);
+        int player_index = je.GetPlayerIndex();
+        wxString label = wxJoyKeyTextCtrl::ToString(mod, key, player_index);
         wxAcceleratorEntry_v accels = wxGetApp().GetAccels();
         for (size_t i = 0; i < accels.size(); ++i) {
              if (label == accels[i].GetUkey())

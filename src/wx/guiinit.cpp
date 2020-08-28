@@ -1693,7 +1693,7 @@ public:
             }
         }
     }
-} JoyPadConfigHandler[4];
+} JoyPadConfigHandler[NUM_JOYSTICKS];
 
 // manage fullscreen mode widget
 // technically, it's more than a validator: it modifies the widget as well
@@ -2065,7 +2065,7 @@ public:
 
         for (size_t i = 0; i < accels.size(); ++i) {
             if (accels[i].GetCommand() == cmdtab[cmd].cmd_id) {
-                if (accels[i].GetJoystick() == 0) {
+                if (accels[i].GetPlayerIndex() == -1) {
                     wxString key = wxJoyKeyTextCtrl::ToCandidateString(accels[i].GetFlags(), accels[i].GetKeyCode());
                     lb->Append(key);
                 }
@@ -2180,7 +2180,7 @@ public:
         // first drop from user accels, if applicable
         for (wxAcceleratorEntry_v::iterator i = user_accels.begin();
              i < user_accels.end(); ++i)
-            if ((i->GetFlags() == acmod && i->GetKeyCode() == ackey && i->GetJoystick() != acjoy)
+            if ((i->GetFlags() == acmod && i->GetKeyCode() == ackey && i->GetPlayerIndex() != acjoy)
                 || (acjoy != 0 && i->GetUkey() == accel)) {
                 user_accels.erase(i);
                 break;
@@ -2552,7 +2552,7 @@ wxAcceleratorEntry_v MainFrame::get_accels(wxAcceleratorEntry_v user_accels)
 
         for (wxAcceleratorEntry_v::iterator e = accels.begin(); e < accels.end(); ++e)
             if ((ae.GetFlags() == e->GetFlags() && ae.GetKeyCode() == e->GetKeyCode())
-                || (ae.GetJoystick() == e->GetJoystick() && ae.GetUkey() == e->GetUkey())) {
+                || (ae.GetPlayerIndex() == e->GetPlayerIndex() && ae.GetUkey() == e->GetUkey())) {
                 accels.erase(e);
                 break;
             }
@@ -2575,7 +2575,7 @@ void MainFrame::set_global_accels()
 
     // first, zero out menu item on all accels
     for (size_t i = 0; i < accels.size(); ++i) {
-        accels[i].Set(accels[i].GetUkey(), accels[i].GetJoystick(), accels[i].GetFlags(), accels[i].GetKeyCode(), accels[i].GetCommand());
+        accels[i].Set(accels[i].GetUkey(), accels[i].GetPlayerIndex(), accels[i].GetFlags(), accels[i].GetKeyCode(), accels[i].GetCommand());
     }
 
     // yet another O(n*m) loop.  I really ought to sort the accel arrays
@@ -2599,7 +2599,7 @@ void MainFrame::set_global_accels()
 
         if (last_accel >= 0) {
             DoSetAccel(mi, &accels[last_accel]);
-            accels[last_accel].Set(accels[last_accel].GetUkey(), accels[last_accel].GetJoystick(), accels[last_accel].GetFlags(), accels[last_accel].GetKeyCode(), accels[last_accel].GetCommand(), mi);
+            accels[last_accel].Set(accels[last_accel].GetUkey(), accels[last_accel].GetPlayerIndex(), accels[last_accel].GetFlags(), accels[last_accel].GetKeyCode(), accels[last_accel].GetCommand(), mi);
         } else {
             // clear out user-cleared menu items
             DoSetAccel(mi, NULL);
@@ -3784,7 +3784,7 @@ bool MainFrame::BindControls()
         wxDialog* joyDialog = LoadXRCropertySheetDialog("JoypadConfig");
         wxFarRadio* r = 0;
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < NUM_JOYSTICKS; i++) {
             wxString pn;
             // NOTE: wx2.9.1 behaves differently for referenced nodes
             // than 2.8!  Unless there is an actual child node, the ID field

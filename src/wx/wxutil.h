@@ -12,16 +12,16 @@ class wxAcceleratorEntryUnicode : public wxAcceleratorEntry
   public:
     wxAcceleratorEntryUnicode(wxAcceleratorEntry *accel);
     wxAcceleratorEntryUnicode(int flags=0, int keyCode=0, int cmd=0, wxMenuItem *item=nullptr);
-    wxAcceleratorEntryUnicode(wxString uKey, int joy=0, int flags=0, int keyCode=0, int cmd=0, wxMenuItem *item=nullptr);
+    wxAcceleratorEntryUnicode(wxString uKey, int player_index=-1, int flags=0, int keyCode=0, int cmd=0, wxMenuItem *item=nullptr);
 
-    void Set(wxString uKey, int joy, int flags, int keyCode, int cmd, wxMenuItem *item=nullptr);
+    void Set(wxString uKey, int player_index, int flags, int keyCode, int cmd, wxMenuItem *item=nullptr);
 
-    int GetJoystick() const { return joystick; };
+    int GetPlayerIndex() const { return player_index; };
     wxString GetUkey() const { return ukey; };
   private:
     void init(int flags, int keyCode);
     wxString ukey;
-    int joystick;
+    int player_index;
 };
 
 #include <unordered_map>

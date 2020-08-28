@@ -11,9 +11,9 @@ EVT_SDLJOY(wxJoyKeyTextCtrl::OnJoy)
 END_EVENT_TABLE()
 
 // Initializer for struct wxJoyKeyBinding
-wxJoyKeyBinding newWxJoyKeyBinding(int key, int mod, SDL_JoystickID joy)
+wxJoyKeyBinding newWxJoyKeyBinding(int key, int mod, int player_index)
 {
-    struct wxJoyKeyBinding tmp = {key, mod, joy};
+    struct wxJoyKeyBinding tmp = {key, mod, player_index};
     return tmp;
 }
 
@@ -84,12 +84,12 @@ void wxJoyKeyTextCtrl::OnJoy(wxSDLJoyEvent& event)
 
     int mod = DigitalButton(event);
     int key = event.GetControlIndex();
-    SDL_JoystickID joy = event.GetJoy() + 1;
+    int player_index = event.GetPlayerIndex();
 
     if (!val || mod < 0)
         return;
 
-    wxString nv = ToString(mod, key, joy);
+    wxString nv = ToString(mod, key, player_index);
 
     if (nv.empty())
         return;
@@ -107,15 +107,15 @@ void wxJoyKeyTextCtrl::OnJoy(wxSDLJoyEvent& event)
         Navigate();
 }
 
-wxString wxJoyKeyTextCtrl::ToString(int mod, int key, SDL_JoystickID joy, bool isConfig)
+wxString wxJoyKeyTextCtrl::ToString(int mod, int key, int player_index, bool isConfig)
 {
-    if (!joy)
+    if (player_index == -1)
         return wxKeyTextCtrl::ToString(mod, key, isConfig);
 
     wxString s;
     // Note: wx translates unconditionally (2.8.12, 2.9.1)!
     // So any strings added below must also be translated unconditionally
-    s.Printf(("Joy%d-"), joy);
+    s.Printf(("Joy%d-"), player_index);
     wxString mk;
 
     switch (mod) {
@@ -176,7 +176,7 @@ wxString wxJoyKeyTextCtrl::ToString(wxJoyKeyBinding_v keys, wxChar sep, bool isC
         if (i > 0)
             ret += sep;
 
-        wxString key = ToString(keys[i].mod, keys[i].key, keys[i].joy, isConfig);
+        wxString key = ToString(keys[i].mod, keys[i].key, keys[i].player_index, isConfig);
 
         if (key.empty())
             return wxEmptyString;
@@ -195,7 +195,7 @@ wxString wxJoyKeyTextCtrl::FromAccelToString(wxAcceleratorEntry_v keys, wxChar s
         if (i > 0)
             ret += sep;
 
-        wxString key = ToString(keys[i].GetFlags(), keys[i].GetKeyCode(), keys[i].GetJoystick(), isConfig);
+        wxString key = ToString(keys[i].GetFlags(), keys[i].GetKeyCode(), keys[i].GetPlayerIndex(), isConfig);
 
         if (key.empty())
             return wxEmptyString;

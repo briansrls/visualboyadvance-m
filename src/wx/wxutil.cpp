@@ -39,25 +39,25 @@ wxAcceleratorEntryUnicode::wxAcceleratorEntryUnicode(int flags, int keyCode, int
 }
 
 
-wxAcceleratorEntryUnicode::wxAcceleratorEntryUnicode(wxString uKey, int joy, int flags, int keyCode, int cmd, wxMenuItem *item)
+wxAcceleratorEntryUnicode::wxAcceleratorEntryUnicode(wxString uKey, int player_index_, int flags, int keyCode, int cmd, wxMenuItem *item)
   : wxAcceleratorEntry(flags, keyCode, cmd, item)
 {
     ukey = uKey;
-    joystick = joy;
+    player_index = player_index_;
 }
 
 
-void wxAcceleratorEntryUnicode::Set(wxString uKey, int joy, int flags, int keyCode, int cmd, wxMenuItem *item)
+void wxAcceleratorEntryUnicode::Set(wxString uKey, int player_index_, int flags, int keyCode, int cmd, wxMenuItem *item)
 {
     ukey = uKey;
-    joystick = joy;
+    player_index = player_index_;
     wxAcceleratorEntry::Set(flags, keyCode, cmd, item);
 }
 
 
 void wxAcceleratorEntryUnicode::init(int flags, int keyCode)
 {
-    joystick = 0;
+    player_index = -1;
     if (!(flags == 0 && keyCode == 0)) {
         ukey.Printf("%d:%d", keyCode, flags);
     }

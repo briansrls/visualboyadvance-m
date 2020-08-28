@@ -675,7 +675,7 @@ void load_opts()
                 wxLogWarning(_("Invalid key binding %s for %s"), s.c_str(), kbopt.c_str());
             else {
                 for (size_t j = 0; j < val.size(); j++)
-                    val[j].Set(val[j].GetUkey(), val[j].GetJoystick(), val[j].GetFlags(), val[j].GetKeyCode(), cmdtab[i].cmd_id);
+                    val[j].Set(val[j].GetUkey(), val[j].GetPlayerIndex(), val[j].GetFlags(), val[j].GetKeyCode(), cmdtab[i].cmd_id);
 
                 gopts.accels.insert(gopts.accels.end(), val.begin(), val.end());
             }
@@ -954,7 +954,7 @@ bool opt_set(const wxString& name, const wxString& val)
                 auto aval = wxJoyKeyTextCtrl::ToAccelFromString(val);
 
                 for (size_t i = 0; i < aval.size(); i++)
-                    aval[i].Set(aval[i].GetUkey(), aval[i].GetJoystick(), aval[i].GetFlags(), aval[i].GetKeyCode(), cmd->cmd_id);
+                    aval[i].Set(aval[i].GetUkey(), aval[i].GetPlayerIndex(), aval[i].GetFlags(), aval[i].GetKeyCode(), cmd->cmd_id);
 
                 if (!aval.size())
                     wxLogWarning(_("Invalid key binding %s for %s"), val.c_str(), name.c_str());

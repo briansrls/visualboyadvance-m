@@ -11,12 +11,12 @@
 typedef struct wxJoyKeyBinding {
     int key; // key code; listed first for easy static init
     int mod; // modifier flags
-    SDL_JoystickID joy; // joystick # (starting at 1)
+    int player_index; // joystick # (starting at 0)
     // if joy is non-0, key = control number, and mod = control type
 } wxJoyKeyBinding;
 
 // Initializer for struct wxJoyKeyBinding
-wxJoyKeyBinding newWxJoyKeyBinding(int key = 0, int mod = 0, SDL_JoystickID joy = 0);
+wxJoyKeyBinding newWxJoyKeyBinding(int key = 0, int mod = 0, int player_index = -1);
 
 typedef std::vector<wxJoyKeyBinding> wxJoyKeyBinding_v;
 
