@@ -1219,7 +1219,7 @@ static std::vector<game_key>* game_keys_pressed(int key, int mod, int player_ind
 {
     auto vec = new std::vector<game_key>;
 
-    for (int player = 0; player < 4; player++)
+    for (int player = 0; player < NUM_JOYSTICKS; player++)
         for (int key_num = 0; key_num < NUM_KEYS; key_num++) {
             wxJoyKeyBinding_v& b = gopts.joykey_bindings[player][key_num];
 
